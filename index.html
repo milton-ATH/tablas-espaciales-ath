@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Tablas Espaciales - Juego de Multiplicación</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-bounce { animation: bounce 1s infinite; }
+        .animate-spin { animation: spin 3s linear infinite; }
+        .animate-ping { animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Iconos SVG simplificados
+        const Icons = {
+            Star: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>,
+            Trophy: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>,
+            Flame: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,
+            Target: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+            CheckCircle: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+            XCircle: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
+            Timer: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="8"/></svg>,
+            Rocket: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>,
+            Crown: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><path d="m2 20 10-10L22 20H2zm10-7 4 4h6l-10-10-10 10h6l4-4z"/></svg>,
+            Medal: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
+            Brain: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2zM14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></svg>,
+            RefreshCw: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+            Zap: () => <svg className="inline" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        };
+
+        function JuegoTablasMultiplicar() {
+            const [pantalla, setPantalla] = useState('menu');
+            const [modoJuego, setModoJuego] = useState(null);
+            const [tablasSeleccionadas, setTablasSeleccionadas] = useState([]);
+            const [preguntaActual, setPreguntaActual] = useState(null);
+            const [respuestaUsuario, setRespuestaUsuario] = useState('');
+            const [puntos, setPuntos] = useState(0);
+            const [racha, setRacha] = useState(0);
+            const [mejorRacha, setMejorRacha] = useState(0);
+            const [feedback, setFeedback] = useState(null);
+            const [preguntasRespondidas, setPreguntasRespondidas] = useState(0);
+            const [correctas, setCorrectas] = useState(0);
+            const [vidas, setVidas] = useState(3);
+            const [tiempo, setTiempo] = useState(60);
+            const [tiempoActivo, setTiempoActivo] = useState(false);
+            const [logros, setLogros] = useState({
+                racha5: false,
+                racha10: false,
+                perfecta: false,
+                velocista: false,
+                maestro: false
+            });
+            const inputRef = useRef(null);
+
+            const coloresTablas = [
+                'from-red-400 to-red-600', 'from-orange-400 to-orange-600', 'from-amber-400 to-amber-600',
+                'from-yellow-400 to-yellow-600', 'from-lime-400 to-lime-600', 'from-green-400 to-green-600',
+                'from-emerald-400 to-emerald-600', 'from-teal-400 to-teal-600', 'from-cyan-400 to-cyan-600',
+                'from-blue-400 to-blue-600'
+            ];
+
+            const modos = [
+                { id: 'clasico', nombre: 'Modo Clásico', descripcion: 'Practica sin presión', Icon: Icons.Brain, color: 'from-blue-500 to-blue-700' },
+                { id: 'contrareloj', nombre: 'Contra Reloj', descripcion: '60 segundos para máxima puntuación', Icon: Icons.Timer, color: 'from-orange-500 to-red-600' },
+                { id: 'supervivencia', nombre: 'Supervivencia', descripcion: '3 vidas, no falles', Icon: Icons.Flame, color: 'from-purple-500 to-pink-600' },
+                { id: 'desafio', nombre: 'Desafío 100', descripcion: 'Responde 100 preguntas', Icon: Icons.Target, color: 'from-green-500 to-emerald-700' }
+            ];
+
+            useEffect(() => {
+                if (tiempoActivo && tiempo > 0 && modoJuego === 'contrareloj') {
+                    const timer = setInterval(() => setTiempo(prev => prev - 1), 1000);
+                    return () => clearInterval(timer);
+                } else if (tiempo === 0 && modoJuego === 'contrareloj') {
+                    finalizarJuego();
+                }
+            }, [tiempoActivo, tiempo, modoJuego]);
+
+            const toggleTabla = (num) => {
+                if (tablasSeleccionadas.includes(num)) {
+                    setTablasSeleccionadas(tablasSeleccionadas.filter(t => t !== num));
+                } else {
+                    setTablasSeleccionadas([...tablasSeleccionadas, num]);
+                }
+            };
+
+            const seleccionarTodasTablas = () => setTablasSeleccionadas([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+            const generarPregunta = () => {
+                if (tablasSeleccionadas.length === 0) return;
+                const tabla = tablasSeleccionadas[Math.floor(Math.random() * tablasSeleccionadas.length)];
+                const multiplicador = Math.floor(Math.random() * 10) + 1;
+                setPreguntaActual({ num1: tabla, num2: multiplicador, respuesta: tabla * multiplicador });
+                setRespuestaUsuario('');
+                setFeedback(null);
+            };
+
+            const iniciarJuego = (modo) => {
+                if (tablasSeleccionadas.length === 0) {
+                    alert('Por favor selecciona al menos una tabla');
+                    return;
+                }
+                setModoJuego(modo);
+                setPantalla('juego');
+                setPuntos(0);
+                setRacha(0);
+                setPreguntasRespondidas(0);
+                setCorrectas(0);
+                setVidas(3);
+                setTiempo(60);
+                setTiempoActivo(modo === 'contrareloj');
+                generarPregunta();
+            };
+
+            const verificarRespuesta = () => {
+                if (respuestaUsuario === '') return;
+                const esCorrecta = parseInt(respuestaUsuario) === preguntaActual.respuesta;
+                setPreguntasRespondidas(prev => prev + 1);
+
+                if (esCorrecta) {
+                    const multiplicadorRacha = Math.floor(racha / 5) + 1;
+                    const multiplicadorTiempo = modoJuego === 'contrareloj' ? 2 : 1;
+                    const puntosGanados = 10 * multiplicadorRacha * multiplicadorTiempo + (racha * 2);
+                    setPuntos(prev => prev + puntosGanados);
+                    setRacha(prev => {
+                        const nuevaRacha = prev + 1;
+                        if (nuevaRacha > mejorRacha) setMejorRacha(nuevaRacha);
+                        if (nuevaRacha === 5 && !logros.racha5) setLogros(prev => ({ ...prev, racha5: true }));
+                        if (nuevaRacha === 10 && !logros.racha10) setLogros(prev => ({ ...prev, racha10: true }));
+                        return nuevaRacha;
+                    });
+                    setCorrectas(prev => prev + 1);
+                    setFeedback({ tipo: 'correcto', puntos: puntosGanados });
+                } else {
+                    setRacha(0);
+                    setFeedback({ tipo: 'incorrecto', respuestaCorrecta: preguntaActual.respuesta });
+                    if (modoJuego === 'supervivencia') {
+                        setVidas(prev => {
+                            const nuevasVidas = prev - 1;
+                            if (nuevasVidas === 0) setTimeout(finalizarJuego, 1500);
+                            return nuevasVidas;
+                        });
+                    }
+                }
+
+                if (modoJuego === 'desafio' && preguntasRespondidas + 1 >= 100) {
+                    setTimeout(finalizarJuego, 1500);
+                    return;
+                }
+
+                setTimeout(() => {
+                    if ((modoJuego === 'supervivencia' && vidas > 1) || modoJuego !== 'supervivencia') {
+                        generarPregunta();
+                        inputRef.current?.focus();
+                    }
+                }, 1500);
+            };
+
+            const finalizarJuego = () => {
+                setTiempoActivo(false);
+                setPantalla('resultados');
+                if (preguntasRespondidas > 0 && correctas === preguntasRespondidas && !logros.perfecta) {
+                    setLogros(prev => ({ ...prev, perfecta: true }));
+                }
+                if (modoJuego === 'contrareloj' && correctas >= 50 && !logros.velocista) {
+                    setLogros(prev => ({ ...prev, velocista: true }));
+                }
+                if (correctas >= 100 && !logros.maestro) {
+                    setLogros(prev => ({ ...prev, maestro: true }));
+                }
+            };
+
+            const handleKeyPress = (e) => { if (e.key === 'Enter') verificarRespuesta(); };
+            const volverAlMenu = () => {
+                setPantalla('menu');
+                setModoJuego(null);
+                setTablasSeleccionadas([]);
+            };
+
+            if (pantalla === 'menu') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-4 overflow-hidden relative">
+                        <div className="absolute inset-0 overflow-hidden">
+                            {Array.from({ length: 50 }).map((_, i) => (
+                                <div key={i} className="absolute bg-white rounded-full animate-pulse"
+                                    style={{
+                                        width: Math.random() * 3 + 1 + 'px',
+                                        height: Math.random() * 3 + 1 + 'px',
+                                        top: Math.random() * 100 + '%',
+                                        left: Math.random() * 100 + '%',
+                                        animationDelay: Math.random() * 2 + 's',
+                                        animationDuration: Math.random() * 3 + 2 + 's'
+                                    }}
+                                />
+                            ))}
+                        </div>
+                        <div className="max-w-6xl mx-auto relative z-10">
+                            <div className="text-center mb-12 mt-8">
+                                <div className="flex justify-center mb-4">
+                                    <div className="text-yellow-300 animate-bounce text-8xl">🚀</div>
+                                </div>
+                                <h1 className="text-7xl font-black text-white mb-4 drop-shadow-2xl">
+                                    🚀 TABLAS ESPACIALES 🌟
+                                </h1>
+                                <p className="text-2xl text-white/90 font-semibold">
+                                    ¡Conquista las matemáticas y conviértete en un maestro multiplicador!
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                {modos.map((modo) => {
+                                    const Icono = modo.Icon;
+                                    return (
+                                        <button key={modo.id}
+                                            onClick={() => { setPantalla('seleccion'); setModoJuego(modo.id); }}
+                                            className={`bg-gradient-to-br ${modo.color} text-white rounded-3xl p-8 hover:scale-105 transform transition-all duration-300 shadow-2xl border-4 border-white/30 hover:border-white/60`}>
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className="bg-white/20 p-4 rounded-2xl text-5xl"><Icono /></div>
+                                                <div className="text-left">
+                                                    <h3 className="text-3xl font-bold">{modo.nombre}</h3>
+                                                    <p className="text-white/80 text-lg">{modo.descripcion}</p>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 border-2 border-white/20">
+                                <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                                    <Icons.Trophy /> Tus Logros
+                                </h3>
+                                <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
+                                    {Object.entries(logros).map(([key, desbloqueado]) => (
+                                        <div key={key}
+                                            className={`${desbloqueado ? 'bg-yellow-400' : 'bg-gray-600'} rounded-2xl p-4 text-center transform transition-all duration-300 ${desbloqueado ? 'scale-100' : 'scale-90 opacity-50'}`}>
+                                            <div className={`text-3xl ${desbloqueado ? 'text-yellow-800' : 'text-gray-400'}`}><Icons.Medal /></div>
+                                            <p className={`text-xs mt-2 ${desbloqueado ? 'text-yellow-900 font-bold' : 'text-gray-300'}`}>
+                                                {key === 'racha5' && 'Racha x5'}
+                                                {key === 'racha10' && 'Racha x10'}
+                                                {key === 'perfecta' && '100% Perfecto'}
+                                                {key === 'velocista' && 'Velocista'}
+                                                {key === 'maestro' && 'Maestro'}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (pantalla === 'seleccion') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 p-8">
+                        <div className="max-w-5xl mx-auto">
+                            <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
+                                <button onClick={() => setPantalla('menu')}
+                                    className="mb-4 text-purple-600 hover:text-purple-800 flex items-center gap-2 font-semibold">
+                                    ← Volver al menú
+                                </button>
+                                <div className="text-center mb-8">
+                                    <h2 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-3">
+                                        Selecciona tus Tablas
+                                    </h2>
+                                    <p className="text-xl text-gray-600">{modos.find(m => m.id === modoJuego)?.nombre}</p>
+                                </div>
+                                <div className="grid grid-cols-5 gap-4 mb-6">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num, index) => (
+                                        <button key={num} onClick={() => toggleTabla(num)}
+                                            className={`bg-gradient-to-br ${tablasSeleccionadas.includes(num) ? coloresTablas[index] : 'from-gray-200 to-gray-300'} 
+                                            ${tablasSeleccionadas.includes(num) ? 'text-white scale-105 shadow-xl' : 'text-gray-700'}
+                                            rounded-2xl p-6 text-4xl font-bold transition-all duration-200 hover:scale-110 transform border-4
+                                            ${tablasSeleccionadas.includes(num) ? 'border-white' : 'border-transparent'}`}>
+                                            {num}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="text-center space-y-4">
+                                    <button onClick={seleccionarTodasTablas}
+                                        className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white px-8 py-3 rounded-full font-bold hover:scale-105 transition-all">
+                                        ✓ Seleccionar Todas
+                                    </button>
+                                    <div>
+                                        <button onClick={() => iniciarJuego(modoJuego)} disabled={tablasSeleccionadas.length === 0}
+                                            className={`${tablasSeleccionadas.length === 0 ? 'bg-gray-400' : 'bg-gradient-to-r from-green-500 to-emerald-600'} 
+                                            text-white px-16 py-5 rounded-full text-3xl font-bold hover:scale-105 transform transition-all duration-200 
+                                            disabled:cursor-not-allowed shadow-xl`}>
+                                            🚀 ¡Comenzar Aventura!
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (pantalla === 'juego') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-4 relative overflow-hidden">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="bg-white/95 backdrop-blur rounded-3xl shadow-2xl p-4 mb-6">
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                    <div className="flex items-center gap-2 bg-yellow-100 rounded-2xl p-3">
+                                        <div className="text-yellow-600 text-2xl"><Icons.Trophy /></div>
+                                        <div>
+                                            <p className="text-xs text-gray-600">Puntos</p>
+                                            <p className="text-2xl font-bold text-yellow-600">{puntos}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-orange-100 rounded-2xl p-3">
+                                        <div className="text-orange-600 text-2xl"><Icons.Flame /></div>
+                                        <div>
+                                            <p className="text-xs text-gray-600">Racha</p>
+                                            <p className="text-2xl font-bold text-orange-600">{racha}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-green-100 rounded-2xl p-3">
+                                        <div className="text-green-600 text-2xl"><Icons.Target /></div>
+                                        <div>
+                                            <p className="text-xs text-gray-600">Precisión</p>
+                                            <p className="text-2xl font-bold text-green-600">
+                                                {preguntasRespondidas > 0 ? Math.round((correctas / preguntasRespondidas) * 100) : 0}%
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {modoJuego === 'supervivencia' && (
+                                        <div className="flex items-center gap-2 bg-red-100 rounded-2xl p-3">
+                                            <div>
+                                                <p className="text-xs text-gray-600">Vidas</p>
+                                                <p className="text-3xl">{'❤️'.repeat(vidas)}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {modoJuego === 'contrareloj' && (
+                                        <div className="flex items-center gap-2 bg-blue-100 rounded-2xl p-3">
+                                            <div className="text-blue-600 text-2xl"><Icons.Timer /></div>
+                                            <div>
+                                                <p className="text-xs text-gray-600">Tiempo</p>
+                                                <p className={`text-2xl font-bold ${tiempo <= 10 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
+                                                    {tiempo}s
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {modoJuego === 'desafio' && (
+                                        <div className="flex items-center gap-2 bg-purple-100 rounded-2xl p-3">
+                                            <div>
+                                                <p className="text-xs text-gray-600">Progreso</p>
+                                                <p className="text-xl font-bold text-purple-600">{preguntasRespondidas}/100</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <button onClick={volverAlMenu}
+                                        className="bg-red-500 text-white rounded-2xl p-3 hover:bg-red-600 transition-all flex items-center justify-center gap-2">
+                                        <div className="text-xl"><Icons.RefreshCw /></div>
+                                        <span className="text-sm font-bold">Salir</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {preguntaActual && (
+                                <div className="bg-white/95 backdrop-blur rounded-3xl shadow-2xl p-12 text-center relative overflow-hidden">
+                                    {racha > 0 && (
+                                        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
+                                            <div className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-500"
+                                                style={{ width: `${Math.min((racha / 20) * 100, 100)}%` }} />
+                                        </div>
+                                    )}
+                                    <div className="mb-8">
+                                        <p className="text-gray-500 text-xl mb-4 font-semibold">¿Cuánto es?</p>
+                                        <div className="text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+                                            {preguntaActual.num1} × {preguntaActual.num2}
+                                        </div>
+                                    </div>
+
+                                    {feedback === null && (
+                                        <div className="space-y-6">
+                                            <input ref={inputRef} type="number" value={respuestaUsuario}
+                                                onChange={(e) => setRespuestaUsuario(e.target.value)}
+                                                onKeyPress={handleKeyPress}
+                                                className="w-80 text-6xl font-bold text-center border-4 border-purple-400 rounded-3xl p-6 focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-200 transition-all"
+                                                placeholder="?" autoFocus />
+                                            <div>
+                                                <button onClick={verificarRespuesta} disabled={respuestaUsuario === ''}
+                                                    className="bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 text-white px-20 py-6 rounded-full text-3xl font-bold hover:scale-105 transform transition-all disabled:bg-gray-400 disabled:cursor-not-allowed shadow-2xl">
+                                                    <span className="flex items-center gap-3">
+                                                        <Icons.Zap /> Verificar <Icons.Zap />
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {feedback && feedback.tipo === 'correcto' && (
+                                        <div className="animate-bounce">
+                                            <div className="flex justify-center mb-4 text-green-500 text-9xl"><Icons.CheckCircle /></div>
+                                            <p className="text-6xl font-bold text-green-600 mb-3">¡PERFECTO! 🎉</p>
+                                            <p className="text-3xl text-purple-600 font-bold mb-2">+{feedback.puntos} puntos</p>
+                                            {racha >= 5 && (
+                                                <div className="mt-4 inline-block bg-gradient-to-r from-orange-400 to-red-500 text-white px-8 py-4 rounded-full text-2xl font-bold animate-pulse">
+                                                    🔥 ¡RACHA DE {racha}! 🔥
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {feedback && feedback.tipo === 'incorrecto' && (
+                                        <div>
+                                            <div className="text-red-500 text-9xl mx-auto mb-4"><Icons.XCircle /></div>
+                                            <p className="text-5xl font-bold text-red-600 mb-4">¡Ups! 😔</p>
+                                            <p className="text-3xl text-gray-700">La respuesta correcta es:</p>
+                                            <p className="text-6xl font-black text-blue-600 mt-2">{feedback.respuestaCorrecta}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
+            if (pantalla === 'resultados') {
+                const precision = preguntasRespondidas > 0 ? Math.round((correctas / preguntasRespondidas) * 100) : 0;
+                const esPerfecto = precision === 100 && preguntasRespondidas > 0;
+
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="bg-white rounded-3xl shadow-2xl p-12 text-center">
+                                <div className="mb-8">
+                                    {esPerfecto ? (
+                                        <>
+                                            <div className="text-yellow-500 text-9xl mx-auto mb-4 animate-bounce"><Icons.Crown /></div>
+                                            <h2 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-orange-600 mb-4">
+                                                ¡PERFECTO! 👑
+                                            </h2>
+                                        </>
+                                    ) : precision >= 80 ? (
+                                        <>
+                                            <div className="text-yellow-500 text-9xl mx-auto mb-4 animate-spin" style={{ animationDuration: '3s' }}>
+                                                <Icons.Star />
+                                            </div>
+                                            <h2 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-4">
+                                                ¡Excelente! ⭐
+                                            </h2>
+                                        </>
+                                    ) : precision >= 60 ? (
+                                        <>
+                                            <div className="text-orange-500 text-9xl mx-auto mb-4"><Icons.Trophy /></div>
+                                            <h2 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600 mb-4">
+                                                ¡Bien Hecho! 🎖️
+                                            </h2>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="text-blue-500 text-9xl mx-auto mb-4"><Icons.Target /></div>
+                                            <h2 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600 mb-4">
+                                                ¡Sigue Practicando! 💪
+                                            </h2>
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                                    <div className="bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl p-6">
+                                        <div className="text-yellow-600 text-5xl mx-auto mb-2"><Icons.Trophy /></div>
+                                        <p className="text-gray-600 text-sm mb-1">Puntos</p>
+                                        <p className="text-4xl font-bold text-yellow-700">{puntos}</p>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-2xl p-6">
+                                        <div className="text-green-600 text-5xl mx-auto mb-2"><Icons.Target /></div>
+                                        <p className="text-gray-600 text-sm mb-1">Precisión</p>
+                                        <p className="text-4xl font-bold text-green-700">{precision}%</p>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl p-6">
+                                        <div className="text-orange-600 text-5xl mx-auto mb-2"><Icons.Flame /></div>
+                                        <p className="text-gray-600 text-sm mb-1">Mejor Racha</p>
+                                        <p className="text-4xl font-bold text-orange-700">{mejorRacha}</p>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl p-6">
+                                        <div className="text-blue-600 text-5xl mx-auto mb-2"><Icons.CheckCircle /></div>
+                                        <p className="text-gray-600 text-sm mb-1">Correctas</p>
+                                        <p className="text-4xl font-bold text-blue-700">{correctas}/{preguntasRespondidas}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <button onClick={() => iniciarJuego(modoJuego)}
+                                        className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-12 py-5 rounded-full text-2xl font-bold hover:scale-105 transform transition-all shadow-xl">
+                                        🔄 Jugar de Nuevo
+                                    </button>
+                                    <div>
+                                        <button onClick={volverAlMenu}
+                                            className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-12 py-5 rounded-full text-2xl font-bold hover:scale-105 transform transition-all shadow-xl">
+                                            🏠 Menú Principal
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+        }
+
+        ReactDOM.render(<JuegoTablasMultiplicar />, document.getElementById('root'));
+    </script>
+</body>
+</html>
